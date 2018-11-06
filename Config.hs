@@ -13,11 +13,14 @@ module Config
     ( Config
     , Config'(..)
     , resolve
+    , main
     )
 where
 
+import           Prelude                   hiding (lookup)
+
 import           Control.Applicative       (optional, (<**>), (<|>))
-import           Control.Monad.Error.Class (MonadError, liftEither, throwError)
+import           Control.Monad.Error.Class (MonadError, liftEither)
 import           Control.Monad.Except      (runExceptT)
 import           Control.Monad.IO.Class    (MonadIO, liftIO)
 import qualified Data.Aeson                as Aeson
@@ -60,10 +63,7 @@ instance Monoid PartialConfig where
 
 -- Retrieve a partial configuration from command line arguments. May also return
 -- a config file path.
-fromArgs
-    :: forall m
-     . (MonadIO m, MonadError String m)
-    => m (PartialConfig, Maybe FilePath)
+fromArgs :: forall m . MonadIO m => m (PartialConfig, Maybe FilePath)
 fromArgs = liftIO (Opt.execParser args)
   where
     args :: Opt.ParserInfo (PartialConfig, Maybe FilePath)
@@ -107,7 +107,7 @@ fromArgs = liftIO (Opt.execParser args)
 
 
 -- Retrieve a partial configuration from environment variables.
-fromEnv :: forall m . (MonadIO m, MonadError String m) => m PartialConfig
+fromEnv :: forall m . MonadIO m => m PartialConfig
 fromEnv = do
     -- logic for mapping settings to environment variables lives here
     foo <- lookup "FOO"
@@ -145,7 +145,7 @@ resolve = do
     (configArgs, configFilePath) <- fromArgs
     configEnv                    <- fromEnv
     configFile                   <- maybe (pure mempty) fromFile configFilePath
-    finalize (configFile <> configEnv)
+    finalize (configArgs <> configFile <> configEnv)
 
 
 main :: IO ()
